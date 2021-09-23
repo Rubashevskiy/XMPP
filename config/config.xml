@@ -1,0 +1,14 @@
+<config>
+  <jid>user_name</jid>
+  <host>jabber.ru</host>
+  <port>5223</port>
+  <password>password</password>
+  <auth>AUTO</auth>
+  <ssl>true</ssl>
+  <resource>XMPPBUS example</resource>
+  <show_status>online</show_status>
+  <msg_status>Jabber lite bot</msg_status>
+  <priority>5</priority>
+  <keep_alive>true</keep_alive>
+  <debug>false</debug>
+</config>
