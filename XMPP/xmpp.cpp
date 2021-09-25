@@ -88,7 +88,7 @@ void XMPP::slotOnTransportData() {
     pugi::xml_document xdoc;
     switch (package->validatePack(div_data, xdoc)) {
       case PackageType::HELLO: parseHello(xdoc); break;
-      case PackageType::AUTH: parseAuth(true, xdoc); break;
+      case PackageType::AUTH: parseAuth(xdoc); break;
       case PackageType::IQ: parseIq(xdoc); break;
       case PackageType::IQ_BIND: writeData(package->packageNewSession()); break;
       case PackageType::IQ_SESSION: writeData(package->packageRoster()); break;
@@ -112,19 +112,16 @@ void XMPP::parseHello(const pugi::xml_document &xdoc) {
   } 
   else {
     auth->setAuthorizationMechanism(xdoc.select_nodes("//mechanism"));
-    parseAuth(false, pugi::xml_document());
+    parseAuth(pugi::xml_document());
   }
 }
 
-void XMPP::parseAuth(const bool challenge, const pugi::xml_document &xdoc) {
+void XMPP::parseAuth(const pugi::xml_document &xdoc) {
   
   std::string buffer;
   AuthStatus status;
 
-  if (challenge) status = auth->setProcessData(xdoc, buffer);
-  else status = auth->getBeginData(buffer);
-
-  switch (status) {
+  switch (auth->getData(xdoc, buffer)) {
     case AuthStatus::PROCESS: {
       writeData(buffer);
       break;

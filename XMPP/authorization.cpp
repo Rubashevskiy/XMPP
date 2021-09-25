@@ -21,35 +21,11 @@ void Authorization::setAuthorizationMechanism(pugi::xpath_node_set mechanisms) {
   }
 }
 
-XMPPBUS::AuthStatus Authorization::getBeginData(std::string &buffer_data) {
-  
-  if (((XMPPBUS::AuthType::Plain == auth_type) && (!suppor_SASL_Plain)) ||
-      ((XMPPBUS::AuthType::SCRAM_SHA1 == auth_type) && (!suppor_SASL_SCRAM_SHA1)) ||
-      ((XMPPBUS::AuthType::DigestMD5== auth_type) && (!suppor_SASL_DigestMD5))
-     )
-    {
-      last_error = "ERROR: Server not support sasl mechanism";
-      return XMPPBUS::AuthStatus::ERROR;
-    }
-
+XMPPBUS::AuthStatus Authorization::getData(const pugi::xml_document &auth_pack, std::string &data_buffer) {
   switch (auth_type) {
-    case XMPPBUS::AuthType::Plain: return getBeginPLAIN(buffer_data);
-    case XMPPBUS::AuthType::DigestMD5: return getBeginDigestMD5(buffer_data);
-    case XMPPBUS::AuthType::SCRAM_SHA1: return getBeginSCRAMSHA1(buffer_data);
-    case  XMPPBUS::AuthType::AUTO: {
-      last_error = "ERROR: Authorization type data missing";
-      return XMPPBUS::AuthStatus::ERROR;
-    }
-  }
-  last_error = "ERROR: Unknown error";
-  return XMPPBUS::AuthStatus::ERROR;
-}
-
-XMPPBUS::AuthStatus Authorization::setProcessData(const pugi::xml_document &auth_pack, std::string &data_buffer) {
-  switch (auth_type) {
-    case XMPPBUS::AuthType::Plain: return setDataPLAIN(auth_pack);
-    case XMPPBUS::AuthType::DigestMD5: return setDataDigestMD5(auth_pack, data_buffer);
-    case XMPPBUS::AuthType::SCRAM_SHA1: return setDataSCRAMSHA1(auth_pack, data_buffer);
+    case XMPPBUS::AuthType::Plain: return dataPLAIN(auth_pack, data_buffer);
+    case XMPPBUS::AuthType::DigestMD5: return dataDigestMD5(auth_pack, data_buffer);
+    case XMPPBUS::AuthType::SCRAM_SHA1: return dataSCRAMSHA1(auth_pack, data_buffer);
     case  XMPPBUS::AuthType::AUTO: {
       last_error = "ERROR: Authorization type data missing";
       return XMPPBUS::AuthStatus::ERROR;
@@ -65,51 +41,34 @@ std::string Authorization::lastError() {
 
 Authorization::~Authorization() {}
 
-XMPPBUS::AuthStatus Authorization::getBeginPLAIN(std::string &data_buffer) {
-  byte data[1024];
-  int offset = 0;
-  data[offset++] = 0;
+XMPPBUS::AuthStatus Authorization::dataPLAIN(const pugi::xml_document &auth_pack, std::string &data_buffer) {
+  if (auth_pack.root().first_child().empty()) {
+    if ((XMPPBUS::AuthType::Plain == auth_type) && (!suppor_SASL_Plain)) {
+      last_error = "ERROR: SERVER NOT SUPPORT AUTH TYPE<PLAIN>";
+      return AuthStatus::ERROR;
+    }
+    byte data[1024];
+    int offset = 0;
+    data[offset++] = 0;
 
-  memcpy(data+offset, auth_user.c_str(), auth_user.length());
-  offset+=auth_user.length();
-  data[offset++] = 0;
+    memcpy(data+offset, auth_user.c_str(), auth_user.length());
+    offset+=auth_user.length();
+    data[offset++] = 0;
 
-  memcpy(data+offset, auth_password.c_str(), auth_password.length());
-  offset += auth_password.length();
+    memcpy(data+offset, auth_password.c_str(), auth_password.length());
+    offset += auth_password.length();
 
-  std::string encoded_response;
-  CryptoPP::ArraySource css(data, offset, true,
+    std::string encoded_response;
+    CryptoPP::ArraySource css(data, offset, true,
       new CryptoPP::Base64Encoder(new CryptoPP::StringSink(encoded_response), false));
 
-  std::stringstream ss;
-  ss << "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>"
-     << encoded_response
-     << "</auth>";
-  data_buffer = ss.str();
-  return XMPPBUS::AuthStatus::PROCESS;
-}
-
-XMPPBUS::AuthStatus Authorization::getBeginSCRAMSHA1(std::string &data_buffer) {
-  selected_nounce = boost::lexical_cast<std::string>(boost::uuids::random_generator()());
-  std::stringstream ss;
-  ss<< "n,,n=" << auth_user << ",r=" << selected_nounce;
-  std::string request = ss.str();
-  request = encodeBase64(request);
-  ss.str("");
-  ss <<  "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='SCRAM-SHA-1'>"
-     << request
-     << "</auth>";
-  data_buffer = ss.str();
-  return AuthStatus::PROCESS;
-}
-
-XMPPBUS::AuthStatus Authorization::getBeginDigestMD5(std::string &data_buffer) {
-  data_buffer = "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='DIGEST-MD5'/>";
-  return XMPPBUS::AuthStatus::PROCESS;
-}
-
-XMPPBUS::AuthStatus Authorization::setDataPLAIN(const pugi::xml_document &auth_pack) {
-
+    std::stringstream ss;
+    ss << "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>"
+       << encoded_response
+       << "</auth>";
+    data_buffer = ss.str();
+    return XMPPBUS::AuthStatus::PROCESS;
+  }
   pugi::xml_node challenge = auth_pack.select_single_node("//challenge").node();
   pugi::xml_node success = auth_pack.select_single_node("//success").node();
   pugi::xml_node failure = auth_pack.select_single_node("//failure").node();
@@ -131,7 +90,15 @@ XMPPBUS::AuthStatus Authorization::setDataPLAIN(const pugi::xml_document &auth_p
   }
 }
 
-XMPPBUS::AuthStatus Authorization::setDataDigestMD5(const pugi::xml_document &auth_pack, std::string &data_buffer) {
+XMPPBUS::AuthStatus Authorization::dataDigestMD5(const pugi::xml_document &auth_pack, std::string &data_buffer) {
+  if (auth_pack.root().first_child().empty()) {
+    if ((XMPPBUS::AuthType::DigestMD5 == auth_type) && (!suppor_SASL_DigestMD5)) {
+      last_error = "ERROR: SERVER NOT SUPPORT AUTH TYPE<DigestMD5>";
+      return AuthStatus::ERROR;
+    }
+    data_buffer = "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='DIGEST-MD5'/>";
+    return XMPPBUS::AuthStatus::PROCESS;
+  }
   pugi::xml_node challenge = auth_pack.select_single_node("//challenge").node();
   pugi::xml_node success = auth_pack.select_single_node("//success").node();
   pugi::xml_node failure = auth_pack.select_single_node("//failure").node();
@@ -191,7 +158,24 @@ XMPPBUS::AuthStatus Authorization::setDataDigestMD5(const pugi::xml_document &au
   return AuthStatus::PROCESS;
 }
 
-XMPPBUS::AuthStatus Authorization::setDataSCRAMSHA1(const pugi::xml_document &auth_pack, std::string &data_buffer) {
+XMPPBUS::AuthStatus Authorization::dataSCRAMSHA1(const pugi::xml_document &auth_pack, std::string &data_buffer) {
+  if (auth_pack.root().first_child().empty()) {
+    if ((XMPPBUS::AuthType::SCRAM_SHA1 == auth_type) && (!suppor_SASL_SCRAM_SHA1)) {
+      last_error = "ERROR: SERVER NOT SUPPORT AUTH TYPE<SCRAM_SHA1>";
+      return AuthStatus::ERROR;
+    }
+    selected_nounce = boost::lexical_cast<std::string>(boost::uuids::random_generator()());
+    std::stringstream ss;
+    ss<< "n,,n=" << auth_user << ",r=" << selected_nounce;
+    std::string request = ss.str();
+    request = encodeBase64(request);
+    ss.str("");
+    ss <<  "<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='SCRAM-SHA-1'>"
+       << request
+       << "</auth>";
+    data_buffer = ss.str();
+    return AuthStatus::PROCESS;
+  }
   pugi::xml_node xml_success_node = auth_pack.select_single_node("//success").node();
   pugi::xml_node challenge_node = auth_pack.select_single_node("//challenge").node();
   pugi::xml_node failure_node = auth_pack.select_single_node("//failure").node();

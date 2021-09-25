@@ -39,18 +39,13 @@ namespace XMPPBUS {
     public:
       Authorization(const std::string host, const std::string user, const std::string password, const XMPPBUS::AuthType used_auth_type);
       void setAuthorizationMechanism(pugi::xpath_node_set mechanisms);
-      XMPPBUS::AuthStatus getBeginData(std::string &buffer_data);
-      XMPPBUS::AuthStatus setProcessData(const pugi::xml_document &auth_pack, std::string &data_buffer);
+      XMPPBUS::AuthStatus getData(const pugi::xml_document &auth_pack, std::string &data_buffer);
       std::string lastError();
       ~Authorization();
     private:
-      XMPPBUS::AuthStatus getBeginPLAIN(std::string &data_buffer);
-      XMPPBUS::AuthStatus getBeginDigestMD5(std::string &data_buffer);
-      XMPPBUS::AuthStatus getBeginSCRAMSHA1(std::string &data_buffer);
-      
-      XMPPBUS::AuthStatus setDataPLAIN(const pugi::xml_document &auth_pack);
-      XMPPBUS::AuthStatus setDataDigestMD5(const pugi::xml_document &auth_pack, std::string &data_buffer);
-      XMPPBUS::AuthStatus setDataSCRAMSHA1(const pugi::xml_document &auth_pack, std::string &data_buffer);
+      XMPPBUS::AuthStatus dataPLAIN(const pugi::xml_document &auth_pack, std::string &data_buffer);
+      XMPPBUS::AuthStatus dataDigestMD5(const pugi::xml_document &auth_pack, std::string &data_buffer);
+      XMPPBUS::AuthStatus dataSCRAMSHA1(const pugi::xml_document &auth_pack, std::string &data_buffer);
 
       std::string decodeBase64(std::string input);
       std::string encodeBase64(std::string input);

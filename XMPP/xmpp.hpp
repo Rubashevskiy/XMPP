@@ -61,7 +61,7 @@ namespace XMPPBUS {
       void slotOnTransportData();
 
       void parseHello(const pugi::xml_document &xdoc);
-      void parseAuth(const bool challenge, const pugi::xml_document &xdoc);
+      void parseAuth(const pugi::xml_document &xdoc);
       void parseRoster(const pugi::xml_document &xdoc);
       void parseIq(const pugi::xml_document &xdoc);
       void parsePresence(const pugi::xml_document &xdoc);
