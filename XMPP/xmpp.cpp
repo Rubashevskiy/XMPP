@@ -173,21 +173,23 @@ void XMPP::parsePresence(const pugi::xml_document &xdoc) {
   pugi::xml_node presence = xdoc.select_single_node("//presence").node();
   std::string to = std::string(presence.attribute("to").value());
   std::string from = std::string(presence.attribute("from").value());
-  if (Contact::bareJid(to) != Contact::bareJid(from)) {
-    roster_list[Contact::bareJid(from)].jid = from;
-    std::string type = std::string(presence.attribute("type").value());
-    if (std::string("unavailable") == type) {
-      roster_list[Contact::bareJid(from)].show_status = "unknown";
-      sigOnRosterUpdate(roster_list);
-      return;
-    }
-    roster_list[Contact::bareJid(from)].show_status = "online";
-    pugi::xml_node show_tag = presence.child("show");
-    if (show_tag) roster_list[Contact::bareJid(from)].show_status = show_tag.text().as_string();
-    pugi::xml_node status_tag = presence.child("status");
-    if (status_tag) roster_list[Contact::bareJid(from)].msg_status = status_tag.text().as_string();
-    sigOnRosterUpdate(roster_list);
+  if ((Contact::bareJid(to) == Contact::bareJid(from)) ||
+      (roster_list.find(Contact::bareJid(from)) != roster_list.end())) {
+    return;
   }
+  roster_list[Contact::bareJid(from)].jid = from;
+  std::string type = std::string(presence.attribute("type").value());
+  if (std::string("unavailable") == type) {
+    roster_list[Contact::bareJid(from)].show_status = "unknown";
+    sigOnRosterUpdate(roster_list);
+    return;
+  }
+  roster_list[Contact::bareJid(from)].show_status = "online";
+  pugi::xml_node show_tag = presence.child("show");
+  if (show_tag) roster_list[Contact::bareJid(from)].show_status = show_tag.text().as_string();
+  pugi::xml_node status_tag = presence.child("status");
+  if (status_tag) roster_list[Contact::bareJid(from)].msg_status = status_tag.text().as_string();
+  sigOnRosterUpdate(roster_list);
 }
 
 void XMPP::parseMessage(const pugi::xml_document &xdoc) {
