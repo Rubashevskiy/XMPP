@@ -34,6 +34,7 @@ namespace XMPPBUS {
       if (std::string::npos != pos_res) return othe_jid.substr(0, pos_res);
       else return othe_jid;
     }
+
     std::string jid;
     std::string show_status;
     std::string msg_status;
