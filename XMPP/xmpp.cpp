@@ -145,7 +145,7 @@ void XMPP::parseRoster(const pugi::xml_document &xdoc) {
     contact.jid = std::string(it->attribute("jid").value());
     contact.name = std::string(it->attribute("name").value());
     contact.show_status = "unknown";
-    pugi::xml_node group_node = query_nodes.select_single_node("//group").node();
+    pugi::xml_node group_node = it->child("group");
     if (group_node) contact.group = std::string(group_node.child_value());
     roster_list[contact.bareJid()] = contact;
   }

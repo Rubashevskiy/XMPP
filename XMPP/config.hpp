@@ -31,43 +31,45 @@ namespace XMPPBUS {
       if (resource.empty()) return jid + "@" + host;
       else return jid + "@" + host + "/" + resource;
     }
-        static std::string nodeToStr(const pugi::xml_node &node) {
+
+    static std::string nodeToStr(const pugi::xml_node &node, std::string def = "") {
       if (node) {
         return std::string(node.child_value());
       }
-      else return std::string("");
+      else return def;
     };
 
-    static int nodeToInt(const pugi::xml_node &node) {
+    static int nodeToInt(const pugi::xml_node &node, int def = 0) {
       if (node) {
         try {
           return std::stoi(std::string(node.child_value()));
         }
         catch (...) {
-          return 0;
+          return def;
         }
       }
-      else return 0;
+      else return def;
     };
 
-    static bool nodeToBool(const pugi::xml_node &node) {
+    static bool nodeToBool(const pugi::xml_node &node, bool def = false) {
       if (node) {
         std::string check = std::string(node.child_value());
         if (("true" == check) || ("True" == check) || ("1" == check)) return true;
-        else return false;
+        else if (("false" == check) || ("False" == check) || ("0" == check)) return false;
+        else return def;
       }
       else return false;
     };
 
-    static AuthType nodeToAuth(const pugi::xml_node &node) {
+    static AuthType nodeToAuth(const pugi::xml_node &node, AuthType def = AuthType::AUTO) {
       if (node) {
         std::string check = std::string(node.child_value());
         if ("DigestMD5" == check) return AuthType::DigestMD5;
         else if ("SCRAM_SHA1" == check) return AuthType::SCRAM_SHA1;
         else if ("Plain" == check) return AuthType::Plain;
-        else return AuthType::AUTO;
+        else return def;
       }
-      else return AuthType::AUTO;
+      else return def;
     };
 
     bool read(const std::string &config_path) {
@@ -77,17 +79,17 @@ namespace XMPPBUS {
         if (!load_result) return false;
         std::string buffer;
         jid = nodeToStr(xdoc.select_single_node("//jid").node());
-        host = nodeToStr(xdoc.select_single_node("//host").node());
-        port = nodeToInt(xdoc.select_single_node("//port").node());
+        host = nodeToStr(xdoc.select_single_node("//host").node(), "jabber.ru");
+        port = nodeToInt(xdoc.select_single_node("//port").node(), 5223);
         password = nodeToStr(xdoc.select_single_node("//password").node());
         auth = nodeToAuth(xdoc.select_single_node("//auth").node());
-        ssl = nodeToBool(xdoc.select_single_node("//ssl").node());
-        resource = nodeToStr(xdoc.select_single_node("//resource").node());
-        show_status = nodeToStr(xdoc.select_single_node("//show_status").node());
-        msg_status = nodeToStr(xdoc.select_single_node("//msg_status").node());
-        priority = nodeToInt(xdoc.select_single_node("//priority").node());
-        keep_alive = nodeToBool(xdoc.select_single_node("//keep_alive").node());
-        debug = nodeToBool(xdoc.select_single_node("//debug").node());
+        ssl = nodeToBool(xdoc.select_single_node("//ssl").node(), true);
+        resource = nodeToStr(xdoc.select_single_node("//resource").node(), "XMPPBUS example");
+        show_status = nodeToStr(xdoc.select_single_node("//show_status").node(), "online");
+        msg_status = nodeToStr(xdoc.select_single_node("//msg_status").node(), "Jabber lite bot");
+        priority = nodeToInt(xdoc.select_single_node("//priority").node(), 5);
+        keep_alive = nodeToBool(xdoc.select_single_node("//keep_alive").node(), true);
+        debug = nodeToBool(xdoc.select_single_node("//debug").node(), false);
         return true;
       }
       catch (...) {
